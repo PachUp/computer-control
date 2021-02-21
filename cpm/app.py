@@ -43,7 +43,6 @@ def login():
         check_box = request.form['CheckBox']
         print(check_box)
         print(check_box)
-        send = ""
         user_check = bool(users.query.filter_by(username=username).first())
         pass_check = bool(users.query.filter_by(password=md5(password.encode("utf-8")).hexdigest()).first())
         if user_check and not pass_check:
@@ -108,14 +107,20 @@ def register():
         else:
             return render_template('/register.html')
 
+@app.route("/")
+@login_required
+def index():
+    return render_template("index.html")
+
 ''' Client '''
 
 global file_cl
 
-@app.route('/')
+
+@app.route('/computer')
 @login_required
 def root():
-  return render_template('s_screen.html')
+  return render_template('computer.html')
 
 @app.route("/represent_file",  methods=['GET'])
 def re_file():

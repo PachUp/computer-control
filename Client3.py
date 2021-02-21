@@ -93,7 +93,7 @@ class GetHistory:
                 if i.find("chrome-extension") == -1:
                     yield i
     
-    def get_DNS_records(self):
+    def get_dns_records(self):
         """TD if I find it necessary"""
         pass
 
