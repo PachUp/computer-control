@@ -24,13 +24,12 @@
     <title>Document</title>
 </head>
 <body>
-    <div id="screen" src="">
-        <div id="items">
-            <i class="fas fa-search item fa-2x" id="history"></i>
-            <i class="fas fa-lock item fa-2x"></i>
-            <i class="fas fa-chart-bar item fa-2x" id="processes"></i>
-            <i class="fas fa-hand-paper item fa-2x"></i>
-        </div>
+    <img id="screen" src="" />
+    <div id="items">
+        <i class="fas fa-search item fa-2x" id="history"></i>
+        <i class="fas fa-lock item fa-2x"></i>
+        <i class="fas fa-chart-bar item fa-2x" id="processes"></i>
+        <i class="fas fa-hand-paper item fa-2x"></i>
     </div>
 
     <div class="modal fade" id="processModal" tabindex="-1" role="dialog" aria-labelledby="processModalLabel" aria-hidden="true">
@@ -105,7 +104,7 @@
         console.log("Connected!");
     });
 
-    $("#screen").click(function(e){
+    $("#screen, #items").click(function(e){
         var parentOffset = $(this).parent().offset(); 
         var relX = e.pageX - parentOffset.left;
         var relY = e.pageY - parentOffset.top;

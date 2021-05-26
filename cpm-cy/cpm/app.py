@@ -186,7 +186,6 @@ def info():
     for process in running_procs:
         formatted_procs = formatted_procs + "--- PID: " + str(process["pid"]) + " --- " + "Name: " + str(process["name"]) + "--0" + "<br>"
     for history_tuple in search_history:
-            print(history_tuple)
             formatted_history = formatted_history + "URL: " + history_tuple[0] + " DATE: " + history_tuple[1] + "<br>"
             # formatted_history = formatted_history + "Date: " + date + " URL: " + url
     # print(formatted_history)
@@ -200,7 +199,6 @@ def pic_click(data):
     global pos_y
     pos_x = data["posX"]
     pos_y = data["posY"]
-    print(pos_x)
 
 """@app.route("/action", methods=["POST"])
 def action():"""
