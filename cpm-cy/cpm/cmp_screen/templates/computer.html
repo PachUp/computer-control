@@ -1,0 +1,204 @@
+<script src="https://code.jquery.com/jquery-3.5.1.js" integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css">
+<!-- Google Fonts -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+<!-- Bootstrap core CSS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
+<!-- Material Design Bootstrap -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/css/mdb.min.css" rel="stylesheet">
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/js/mdb.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/css/mdb.min.css" rel="stylesheet">
+<!--<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='css/computer.css') }}">
+<link rel= "stylesheet" type= "text/css" href= "../static/css/computer.css"> !-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="container">
+        <img id="screen" src="">
+        <div id="items">
+            <i class="fas fa-search item fa-2x" id="history"></i>
+            <i class="fas fa-lock item fa-2x"></i>
+            <i class="fas fa-chart-bar item fa-2x" id="processes"></i>
+            <i class="fas fa-hand-paper item fa-2x"></i>
+        </div>
+    </div>
+
+    <div class="modal fade" id="processModal" tabindex="-1" role="dialog" aria-labelledby="processModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="processModalLabel">Running processes</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              ...
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary">Save changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="historyModal" tabindex="-1" role="dialog" aria-labelledby="historyModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="historyModalLabel">Running processes</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              ...
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary">Save changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+</body>
+</html>
+<script>
+    var iconTimer;
+    var process_text = "";
+    $("#screen, #items").mousemove(function(){
+        $(".item").show("fast");
+        clearTimeout(iconTimer); // to prevent event loops
+        iconTimer = setTimeout(function(){
+            hideIcons();
+       }, 5000);
+    });
+
+    $("#processes").click(function(){ // function used to trigger the modal.
+        console.log("Triggered");
+        $('#processModal').modal('show');
+    });
+
+    $("#history").click(function(){ // function used to trigger the modal.
+        console.log("Triggered");
+        $('#historyModal').modal('show');
+    });
+
+    function hideIcons(){
+        $(".item").hide("fast");
+    }
+    
+    $("ItemPreview").click(function(){
+        var parentOffset = $(this).parent().offset(); 
+        var relX = e.pageX - parentOffset.left;
+        var relY = e.pageY - parentOffset.top;
+        socketio.
+    });
+    // socketio part
+    var socketio = io();
+    socketio.on('connect', function() {
+        console.log("Connected!");
+    });
+    socketio.on("get-file", function(data){
+        console.log("Called!")
+        recv_img(); // showing the image when it's recived in the server.
+        //document.getElementById("screen").src = "data:image/png;base64," + data["data"];
+    });
+    socketio.on("info", function(data){
+        console.log(data)
+        var process_modal = $('#processModal');
+        var history_modal = $('#historyModal');
+        process_modal.find('.modal-body').html(data["procs"]);
+        history_modal.find('.modal-body').html(data["history"]);
+    });
+    
+    function recv_img(){
+        const img = document.querySelector('img');
+        $.ajax({ // try to disable cache if it doesn't work.
+        url: "/represent_file",
+        type: 'GET',
+            success: function(data, status) {
+                document.getElementById("screen").src = "data:image/png;base64," + data;
+                // img.src = objectURL;
+            }
+        });
+    }
+</script>
+
+<style>
+i.fas {
+    display: inline-block;
+    border-radius: 60px;
+    box-shadow: 3px 0px 2px #888;
+    padding: 0.5em 0.6em ;
+}
+i.fa-lock{
+    box-shadow: 3px 1px 2px rgba(255, 0, 0, 0.548);
+}
+i.fa-hand-paper{
+    box-shadow: 3px 1px 2px rgba(255, 0, 0, 0.548);
+}
+#screen {
+    height: 1080px;
+    width: 1920px;
+    padding: 0;
+    display: block;
+    margin: 0 auto;
+}
+.container {
+    display: inline-block;
+border: 1px solid;
+position: absolute;
+width: 100%;
+    height: 100%;
+}
+#items{
+    display: block;
+    text-align: center;
+    position: absolute;
+    top: 900;
+    width: 100%;
+    height: 100%;
+}
+.item{
+        margin:90px;
+        display: none;
+}
+@media screen  and  (min-width: 300px) and (max-width: 1000px){
+    .item{
+        margin:30px;
+    }
+    #items{
+        display: block;
+        text-align: center;
+        position: absolute;
+        top: 900;
+        margin-left: 800px;
+        float:inline-end;
+    }
+}
+@media screen  and  (min-width: 1000px) and (max-width: 1490px){
+    .item{
+        margin:30px;
+    }
+    #items{
+        display: block;
+        text-align: center;
+        position: absolute;
+        top: 900;
+        margin-left: 400px;
+    }
+}
+</style>
