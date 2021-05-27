@@ -56,7 +56,7 @@ class ScreenShot:
                 # Get the entire PNG raw bytes
                 raw_bytes = mss.tools.to_png(im.rgb, im.size, level=7)
                 if raw_bytes != prev_img:
-                    requests.post(SERVER_URL + '/get_file' + computer_id, data=raw_bytes,
+                    requests.post(SERVER_URL + '/get_file/' + computer_id, data=raw_bytes,
                                   headers={'Content-Type': 'application/octet-stream'})
                 prev_img = raw_bytes
 
@@ -80,7 +80,7 @@ class GetHistory:
 
     def get_chrome_history(self):
         ###
-        """Getting the user's chrome history from the DB and returning the 10 most recent history results"""
+        """Getting the user's chrome history from the DB and returning the 10 most recent history searches"""
         user = getpass.getuser()
         history = "C:\\Users\\" + user + "\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\History"
         copyfile(history, '.\\ChromeHistoryCopy')
@@ -141,7 +141,7 @@ def computer_mac_address():
 
 def main():
     status_code = 200
-    address_link = 'http://admin-monitor.herokuapp.com/computers/verify_login'
+    address_link = 'http://127.0.0.1:5000/computers/verify_login'
     response = requests.get(address_link)
     status_code = response.status_code
     print(status_code)
@@ -149,8 +149,8 @@ def main():
     send_request_to = ""
     print(computer_mac_address())
     if status_code == 200:
-        send_request_to = "http://admin-monitor.herokuapp.com/computers"
-        req_id = requests.post('http://admin-monitor.herokuapp.com/computers/verify_login',
+        send_request_to = "http://127.0.0.1:5000/computers"
+        req_id = requests.post('http://127.0.0.1:5000/computers/verify_login',
                             json={"mac_address": computer_mac_address()})
         computer_id = req_id.content.decode()
         print("computer id: " + computer_id)
@@ -159,7 +159,7 @@ def main():
             send_request_to = send_request_to + "/" + computer_id
     screen = ScreenShot()
     running_proc = ProcessDetails()
-    server_send = SendToServer(SERVER_URL + "/info" + computer_id)
+    server_send = SendToServer(SERVER_URL + "/info/" + computer_id)
     com_history = GetHistory()
     mouse = ComputerAction()
     send_details = threading.Thread(target=server_send.send_computer_details, args=[running_proc, com_history])

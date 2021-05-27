@@ -6,7 +6,7 @@ from wsgiref.util import FileWrapper
 from sqlalchemy import func
 from hashlib import md5
 from zlib import decompress
-from flask_socketio import SocketIO, send, emit
+from flask_socketio import SocketIO, send, emit, join_room, leave_room
 import base64
 import socket
 import threading
@@ -142,14 +142,14 @@ def index():
 
 ''' Client '''
 
-file_cl = ""
-pos_x = ""
-pos_y = ""
-lock = "False"
+file_cl = "" # The frame that the client sends.
+pos_x = {} # the X position of the mouse on the img
+pos_y = {} # the Y position of the mouse on the img
+lock = {} # Variable that indicates on wether to lock the screen or not.
 
-@app.route('/computer')
+@app.route('/computers/<int:id>')
 @login_required
-def root():
+def root(id):
     return render_template('computer.html')
 
 
@@ -200,8 +200,14 @@ def check_if_user_exists():
         return ""
 
 
-@app.route("/represent_file", methods=['GET'])
-def re_file():
+@socketio.on('join')
+def on_join(data):
+    room = data['room']
+    print("joined room " + room)
+    join_room(room)
+
+@app.route("/represent_file/<int:id>", methods=['GET'])
+def re_file(id):
     '''
     The function returns a base64 encoded image that was sent to him from the client.
     '''
@@ -216,7 +222,10 @@ def re_file():
 
 
 @app.route("/get_file/<int:id>", methods=['POST'])
-def get_file():
+def get_file(id):
+    '''
+    A function that sends the client when to ask for the new picture.
+    '''
     if request.method == "POST":
         global file_cl
         t_file = request.data
@@ -225,14 +234,14 @@ def get_file():
             base64_encoded_img = base64.b64encode(file_cl)
             base64_img = base64_encoded_img.decode('utf-8')
             socketio.emit("get-file", {
-                "data": "OK"})  # The reason I am using socketio in here is so that I'll know when to ask for the new image.
+                "data": "OK"}, room=str(id))  # The reason I am using socketio in here is so that I'll know when to ask for the new image.
         except:
             return "Err"
         return "200 OK"
 
 
 @app.route("/info/<int:id>", methods=['POST'])
-def info():
+def info(id):
     data = request.get_json()
     running_procs = data["running processes"]
     search_history = data["chrome history"]
@@ -244,7 +253,7 @@ def info():
             formatted_history = formatted_history + "URL: " + history_tuple[0] + " DATE: " + history_tuple[1] + "<br>"
             # formatted_history = formatted_history + "Date: " + date + " URL: " + url
     # print(formatted_history)
-    socketio.emit("info", {"procs": formatted_procs, "history" : formatted_history})
+    socketio.emit("info", {"procs": formatted_procs, "history" : formatted_history}, room=str(id))
     return "200 OK"
 
 
@@ -284,7 +293,7 @@ def so():
             c.send(position.encode()) # sending data to the client
             pos_x = "" # restting the variables so it wont send it all the time.
             pos_y = ""
-        if lock != prev_lock:
+        if lock != prev_lock and len(lock) != 0:
             print(lock)
             if lock == "True":
                 c.send("Lock".encode())
