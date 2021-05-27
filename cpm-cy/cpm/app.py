@@ -10,6 +10,7 @@ from flask_socketio import SocketIO, send, emit
 import base64
 import socket
 import threading
+import time
 import functools
 
 
@@ -27,6 +28,9 @@ login_manager.init_app(app)
 db = SQLAlchemy(app)
 socketio = SocketIO(app)
 
+class computer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    mac_address = db.Column(db.TEXT)
 
 class users(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -131,18 +135,69 @@ def click():
 @app.route("/")
 @login_required
 def index():
-    return render_template("index.html")
+    all_computers = []
+    for i in range(0, len(computer.query.all())):
+        all_computers.append(computer.query.all()[i].id)
+    return render_template("index.html", computer_list_nev=all_computers)
 
 ''' Client '''
 
 file_cl = ""
 pos_x = ""
 pos_y = ""
+lock = "False"
 
 @app.route('/computer')
 @login_required
 def root():
     return render_template('computer.html')
+
+
+def add_computer(mac_address, new_id):
+    print(mac_address)
+    print(new_id)
+    new_user = computer(mac_address=mac_address, id=new_id)
+    db.session.add(new_user)
+    db.session.commit()
+    return str(new_id)
+
+#verify_login
+@app.route('/computers/verify_login', methods=['POST', 'GET'])
+def check_if_user_exists():
+    if request.method == 'POST':
+        js = request.get_json()
+        print(js)
+        if js is not None:
+            mac_address = js['mac_address']
+            print("MAC: " + mac_address)
+            print(len(computer.query.all()))
+            check_zero_computers = 0 # if there are 0 computers the for loop won't even happend.
+            if len(computer.query.all()) == 0:
+                print("1")
+                check_zero_computers = 1
+            else:
+                check_zero_computers = 0
+
+            for i in range(0,len(computer.query.all()) + check_zero_computers):
+                print("In")
+                if check_zero_computers == 0:
+                    print("checking i")
+                    current_id = computer.query.all()[i].id
+                    current_mac = computer.query.all()[i].mac_address
+                elif check_zero_computers == 1:
+                    print("No comp")
+                    current_id = 0
+                    current_mac = 0
+                if mac_address == current_mac:
+                    print("True!")
+                    return str(current_id)
+            print("Not found")
+            new_id = len(computer.query.all()) + 1
+            return add_computer(mac_address, new_id)
+        else:
+            print("Empty, bad request")
+    else:   
+        return ""
 
 
 @app.route("/represent_file", methods=['GET'])
@@ -160,7 +215,7 @@ def re_file():
             return "Err"
 
 
-@app.route("/get_file", methods=['POST'])
+@app.route("/get_file/<int:id>", methods=['POST'])
 def get_file():
     if request.method == "POST":
         global file_cl
@@ -176,7 +231,7 @@ def get_file():
         return "200 OK"
 
 
-@app.route("/info", methods=['POST'])
+@app.route("/info/<int:id>", methods=['POST'])
 def info():
     data = request.get_json()
     running_procs = data["running processes"]
@@ -199,6 +254,12 @@ def pic_click(data):
     global pos_y
     pos_x = data["posX"]
     pos_y = data["posY"]
+    print(pos_x)
+
+@socketio.on("lock")
+def lock_client(data):
+    global lock
+    lock = data["lock"]
 
 """@app.route("/action", methods=["POST"])
 def action():"""
@@ -206,9 +267,11 @@ def action():"""
 def so():
     global pos_x
     global pos_y
+    global lock
+    prev_lock = "False"
     s = socket.socket()         
     print ("Socket successfully created")
-    port = 12345                
+    port = 12345
     s.bind(('', port))         
     print ("socket binded to %s" %(port))
     s.listen(5) # the amount of computers connected
@@ -217,14 +280,23 @@ def so():
     print ('Got connection from', addr )
     while True:
         if pos_x != "" and pos_y != "":
-            position = f'["{pos_x}", "{pos_y}"]'
-            c.send(position.encode())
-            pos_x = ""
+            position = f'["{pos_x}", "{pos_y}"]' # formatting the string as a list
+            c.send(position.encode()) # sending data to the client
+            pos_x = "" # restting the variables so it wont send it all the time.
             pos_y = ""
+        if lock != prev_lock:
+            print(lock)
+            if lock == "True":
+                c.send("Lock".encode())
+            else:
+                c.send("Unlock".encode())
+            prev_lock = lock
+        
         
 
 if __name__ == '__main__':
     socketio_func = functools.partial(socketio.run, app, host="0.0.0.0")
     threading.Thread(target=socketio_func).start()
     threading.Thread(target=so, daemon=True).start()
+    # socketio.run(app, host="0.0.0.0", debug=True)
 

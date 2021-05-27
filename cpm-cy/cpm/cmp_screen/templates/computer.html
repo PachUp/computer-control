@@ -27,9 +27,9 @@
     <img id="screen" src="" />
     <div id="items">
         <i class="fas fa-search item fa-2x" id="history"></i>
-        <i class="fas fa-lock item fa-2x"></i>
+        <i class="fas fa-lock item fa-2x" id="lock"></i>
         <i class="fas fa-chart-bar item fa-2x" id="processes"></i>
-        <i class="fas fa-hand-paper item fa-2x"></i>
+        <i class="fas fa-hand-paper item fa-2x" id="control"></i>
     </div>
 
     <div class="modal fade" id="processModal" tabindex="-1" role="dialog" aria-labelledby="processModalLabel" aria-hidden="true">
@@ -76,6 +76,8 @@
 <script>
     var iconTimer;
     var process_text = "";
+    var control = 1;
+    var lock = 1;
     $("#screen, #items").mousemove(function(){
         $(".item").show("fast");
         clearTimeout(iconTimer); // to prevent event loops
@@ -105,14 +107,40 @@
     });
 
     $("#screen, #items").click(function(e){
-        var parentOffset = $(this).parent().offset(); 
+        var parentOffset = $(this).parent().offset();
         var relX = e.pageX - parentOffset.left;
         var relY = e.pageY - parentOffset.top;
-        console.log(relY)
-        console.log(relX)
-        socketio.emit("pic click", {"posX": relX, "posY": relY})
+        console.log(relY);
+        console.log(relX);
+        if(control % 2 == 0 && control != 2){
+            socketio.emit("pic click", {"posX": relX, "posY": relY})
+            console.log("send")
+        }
     });
 
+    $("#control").click(function(){
+        control++;
+        if(control % 2 == 0){
+            $("#control").css("box-shadow", "3px 1px 2px rgba(0, 255, 21, 0.548)")
+        }
+        else{
+            $("#control").css("box-shadow", "3px 1px 2px rgba(255, 0, 0, 0.548)")
+        }
+    });
+
+    $("#lock").click(function(){
+        lock++;
+        if(lock % 2 == 0){
+            $("#lock").css("box-shadow", "3px 1px 2px rgba(0, 255, 21, 0.548)")
+            socketio.emit("lock", {"lock": "True"})
+            console.log("send t")
+        }
+        else{
+            $("#lock").css("box-shadow", "3px 1px 2px rgba(255, 0, 0, 0.548)")
+            socketio.emit("lock", {"lock": "False"})
+            console.log("send f")
+        }
+    });
     socketio.on("get-file", function(data){
         console.log("Called!")
         recv_img(); // showing the image when it's recived in the server.

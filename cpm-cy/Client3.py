@@ -8,11 +8,13 @@ import psutil
 import threading
 import sqlite3
 from shutil import copyfile
+import getmac
 import getpass
 import socket
 import json
 import win32api, win32con
-
+from ctypes import windll
+import time
 
 SERVER_URL = "http://127.0.0.1:5000"
 
@@ -37,7 +39,7 @@ class ScreenShot:
     def __init__(self):
         pass
 
-    def send_screenshot(self):
+    def send_screenshot(self, computer_id):
         """Sending the screenshots to the server as long as the picture actually changes"""
         first_occu = 0
         prev_img = ""
@@ -54,7 +56,7 @@ class ScreenShot:
                 # Get the entire PNG raw bytes
                 raw_bytes = mss.tools.to_png(im.rgb, im.size, level=7)
                 if raw_bytes != prev_img:
-                    requests.post(SERVER_URL + '/get_file', data=raw_bytes,
+                    requests.post(SERVER_URL + '/get_file' + computer_id, data=raw_bytes,
                                   headers={'Content-Type': 'application/octet-stream'})
                 prev_img = raw_bytes
 
@@ -118,23 +120,50 @@ class ComputerAction:
 
     def check_mouse_click(self):
         while True:
-            server_pos = self.s.recv(1024)
-            pos = json.loads(server_pos.decode())
-            print(pos)
-            pos_x = int(pos[0])
-            pos_y = int(pos[1])
-            self.click(pos_x, pos_y)
+            server_command = self.s.recv(1024)
+            try:
+                pos = json.loads(server_command.decode())
+                print(pos)
+                pos_x = int(pos[0])
+                pos_y = int(pos[1])
+                self.click(pos_x, pos_y)
+            except:
+                lock_or_not = server_command.decode()
+                print(lock_or_not)
+                if lock_or_not == "Lock":
+                    windll.user32.BlockInput(True)
+                else:
+                    windll.user32.BlockInput(False)
 
-            
+
+def computer_mac_address():
+    return getmac.get_mac_address()
 
 def main():
+    status_code = 200
+    address_link = 'http://admin-monitor.herokuapp.com/computers/verify_login'
+    response = requests.get(address_link)
+    status_code = response.status_code
+    print(status_code)
+    computer_id = ""
+    send_request_to = ""
+    print(computer_mac_address())
+    if status_code == 200:
+        send_request_to = "http://admin-monitor.herokuapp.com/computers"
+        req_id = requests.post('http://admin-monitor.herokuapp.com/computers/verify_login',
+                            json={"mac_address": computer_mac_address()})
+        computer_id = req_id.content.decode()
+        print("computer id: " + computer_id)
+        print(type(computer_id))
+        if computer_id != "":
+            send_request_to = send_request_to + "/" + computer_id
     screen = ScreenShot()
     running_proc = ProcessDetails()
-    server_send = SendToServer(SERVER_URL + "/info")
+    server_send = SendToServer(SERVER_URL + "/info" + computer_id)
     com_history = GetHistory()
     mouse = ComputerAction()
     send_details = threading.Thread(target=server_send.send_computer_details, args=[running_proc, com_history])
-    send_screenshots = threading.Thread(target=screen.send_screenshot)
+    send_screenshots = threading.Thread(target=screen.send_screenshot, args=[computer_id])
     send_action = threading.Thread(target=mouse.check_mouse_click)
     send_screenshots.setDaemon(True)
     send_details.start()
