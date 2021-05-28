@@ -187,9 +187,12 @@ def admin_panel():
 
 def level_2_handle(remove_vals, user, level):
     """
+    :param remove_vals: the people that the user is allow to view
+    :param user: the current username of the user
+    :param level: the current level of the user.
+    
     The function handles the LV 2 output that it recieved from the client.
     """
-
     count = 0
     if level == 2:
         if remove_vals[0] == "None":
@@ -226,7 +229,6 @@ def admin_data():
     """
     The following function handles the request that the admin sent and updates everything accordingly.
     """
-
     if request.method == "POST":
         try:
             assign_value = -1
@@ -290,6 +292,9 @@ def admin_data():
 @app.route("/")
 @login_required
 def index():
+    """
+    The function returns the index page.
+    """
     all_computers = []
     for i in range(0, len(Computer.query.all())):
         all_computers.append(Computer.query.all()[i].id)
@@ -308,6 +313,12 @@ client_id = {}
 @app.route('/computers/<int:id>')
 @login_required
 def root(id):
+    """
+    :param id: the ID of the computer.
+
+    The following function checks if the user is allowed to view the computer
+    if he does, the function returns the page.
+    """
     if current_user.is_authenticated:
         if current_user.level == 1:
             if current_user.computer_id == id:
@@ -339,6 +350,12 @@ def root(id):
 
 
 def add_computer(mac_address, new_id):
+    """
+    :param mac_address: the mac address of the client
+    :param new_id: the id that the computer is being assigned to
+
+    The function adds a new computer client to the DB
+    """
     print(mac_address)
     print(new_id)
     new_user = Computer(mac_address=mac_address, id=new_id)
@@ -350,6 +367,9 @@ def add_computer(mac_address, new_id):
 # verify_login
 @app.route('/computers/verify_login', methods=['POST', 'GET'])
 def check_if_user_exists():
+    """
+    The function checks if the computer exists in the db.
+    """
     if request.method == 'POST':
         js = request.get_json()
         current_mac = ""
@@ -398,6 +418,8 @@ def on_join(data):
 @app.route("/represent_file/<int:id>", methods=['GET'])
 def re_file(id):
     """
+    :param id: the ID of the computer.
+
     The function returns a base64 encoded image that was sent to him from the client.
     """
     if request.method == "GET":
@@ -413,6 +435,8 @@ def re_file(id):
 @app.route("/get_file/<int:id>", methods=['POST'])
 def get_file(id):
     """
+    :param id: the ID of the computer.
+
     A function that sends the client when to ask for the new picture.
     """
     if request.method == "POST":
@@ -432,6 +456,11 @@ def get_file(id):
 
 @app.route("/info/<int:id>", methods=['POST'])
 def info(id):
+    """
+    :param id: the ID of the computer.
+
+    The function emits the data of the computer to the browser's client.
+    """
     data = request.get_json()
     running_procs = data["running processes"]
     search_history = data["chrome history"]
@@ -466,12 +495,12 @@ def lock_client(data):
     lock_foramt = {id: lock}
 
 
-"""@app.route("/action", methods=["POST"])
-def action():"""
-
-
 class ClientSocket:
     def __init__(self):
+        """
+        init a socket connection
+        """
+
         self.s = socket.socket()
         print ("Socket successfully created")
         port = 12341
@@ -480,6 +509,9 @@ class ClientSocket:
         self.s.listen(5)  # the amount of computers connected
 
     def accept(self):
+        """
+        accepts new connections and opens a new thread.
+        """
         while True:
             c, addr = self.s.accept()
             print ('Got connection from', addr)
@@ -487,6 +519,11 @@ class ClientSocket:
             # multiprocessing.Process(target=send_client, args=("c", )).start()
 
     def client_verification(self, c):
+        """
+        :param c: socket object
+
+        The function correlate the computer client to the browser's client.
+        """
         global pos_foramt
         global lock_foramt
         global client_id
@@ -508,6 +545,14 @@ class ClientSocket:
                             lock_foramt = {}  # restting the variables so it wont send it all the time.
 
     def send_client(self, c, s_format, identify, id):
+        """
+        :param c: socket object
+        :param s_foramt: the format of the position or lock
+        :param identify: what the function sent; lock or pos
+        :param id: the ID of the computer.
+
+        The function sends the data to the computer's client.
+        """
         try:
             if identify == "pos":
                 position = f'["{s_format[id][0]}", "{s_format[id][1]}"]'  # formatting the string as a list
