@@ -1,3 +1,4 @@
+from operator import pos
 from flask import Blueprint, request, render_template, Flask, redirect, jsonify, Response, send_file, make_response
 from flask_login import LoginManager, UserMixin, login_user, login_required, current_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
@@ -10,6 +11,7 @@ from flask_socketio import SocketIO, send, emit, join_room, leave_room
 import base64
 import socket
 import threading
+import multiprocessing
 import time
 import functools
 
@@ -143,9 +145,9 @@ def index():
 ''' Client '''
 
 file_cl = "" # The frame that the client sends.
-pos_x = {} # the X position of the mouse on the img
-pos_y = {} # the Y position of the mouse on the img
-lock = {} # Variable that indicates on wether to lock the screen or not.
+pos_foramt = {} # the X & Y position of the mouse on the img with the ID
+lock_foramt = {} # Variable that indicates on wether to lock the screen or not with the ID.
+client_id = {}
 
 @app.route('/computers/<int:id>')
 @login_required
@@ -250,7 +252,7 @@ def info(id):
     for process in running_procs:
         formatted_procs = formatted_procs + "--- PID: " + str(process["pid"]) + " --- " + "Name: " + str(process["name"]) + "--0" + "<br>"
     for history_tuple in search_history:
-            formatted_history = formatted_history + "URL: " + history_tuple[0] + " DATE: " + history_tuple[1] + "<br>"
+            formatted_history = formatted_history + "DATE: " + history_tuple[0] + "<br> URL: " + history_tuple[1] + "<br><br>"
             # formatted_history = formatted_history + "Date: " + date + " URL: " + url
     # print(formatted_history)
     socketio.emit("info", {"procs": formatted_procs, "history" : formatted_history}, room=str(id))
@@ -259,53 +261,79 @@ def info(id):
 
 @socketio.on("pic click")
 def pic_click(data):
-    global pos_x
-    global pos_y
+    global pos_foramt
     pos_x = data["posX"]
     pos_y = data["posY"]
-    print(pos_x)
+    id = data["room"]
+    pos_foramt = {id: [pos_x, pos_y]}
 
 @socketio.on("lock")
 def lock_client(data):
-    global lock
+    global lock_foramt
     lock = data["lock"]
+    id = data["room"]
+    lock_foramt = {id: lock}
 
 """@app.route("/action", methods=["POST"])
 def action():"""
 
-def so():
-    global pos_x
-    global pos_y
-    global lock
-    prev_lock = "False"
-    s = socket.socket()         
-    print ("Socket successfully created")
-    port = 12345
-    s.bind(('', port))         
-    print ("socket binded to %s" %(port))
-    s.listen(5) # the amount of computers connected
-    print ("socket is listening")
-    c, addr = s.accept()
-    print ('Got connection from', addr )
-    while True:
-        if pos_x != "" and pos_y != "":
-            position = f'["{pos_x}", "{pos_y}"]' # formatting the string as a list
-            c.send(position.encode()) # sending data to the client
-            pos_x = "" # restting the variables so it wont send it all the time.
-            pos_y = ""
-        if lock != prev_lock and len(lock) != 0:
-            print(lock)
-            if lock == "True":
-                c.send("Lock".encode())
+class ClientSocket:
+    def __init__(self):
+        self.s = socket.socket()         
+        print ("Socket successfully created")
+        port = 12341
+        self.s.bind(('', port))         
+        print ("socket binded to %s" %(port))
+        self.s.listen(5) # the amount of computers connected
+
+    def accept(self):
+        while True:
+            c, addr = self.s.accept()
+            print ('Got connection from', addr )
+            threading.Thread(target=self.client_verification, args=[c], daemon=True).start()
+            # multiprocessing.Process(target=send_client, args=("c", )).start()
+        
+    def client_verification(self, c):
+        global pos_foramt
+        global lock_foramt
+        global client_id
+        print("active")
+        id = str(c.recv(1024).decode()) # making sure
+        client_id[id] = c
+        while True:
+            if len(pos_foramt) > 0:
+                for client_pos in pos_foramt:
+                    for client in list(client_id):
+                        if client == client_pos:
+                            self.send_client(c, pos_foramt, "pos", id)
+                            pos_foramt = {} # restting the variables so it wont send it all the time.
+            if len(lock_foramt) > 0:
+                for client_lock in lock_foramt:
+                    for client in list(client_id):
+                        if client == client_lock:
+                            self.send_client(c, lock_foramt, "lock", id)
+                            lock_foramt = {} # restting the variables so it wont send it all the time.
+
+
+    def send_client(self, c, s_format, identify, id):
+        try:
+            if identify == "pos":
+                position = f'["{s_format[id][0]}", "{s_format[id][1]}"]' # formatting the string as a list
+                c.send(position.encode()) # sending data to the client
             else:
-                c.send("Unlock".encode())
-            prev_lock = lock
-        
-        
+                if s_format[id] == "True":
+                    c.send("Lock".encode())
+                else:
+                    c.send("Unlock".encode())
+        except socket.error:
+            print("Bye!")
+            del client_id[id] # in case that the client disconnect.
+            print(client_id)
 
 if __name__ == '__main__':
+    client_socket = ClientSocket()
     socketio_func = functools.partial(socketio.run, app, host="0.0.0.0")
     threading.Thread(target=socketio_func).start()
-    threading.Thread(target=so, daemon=True).start()
+    threading.Thread(target=client_socket.accept, daemon=True).start()
     # socketio.run(app, host="0.0.0.0", debug=True)
 

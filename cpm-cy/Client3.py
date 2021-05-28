@@ -110,7 +110,7 @@ class GetHistory:
 class ComputerAction:
     def __init__(self):
         self.s = socket.socket()
-        port = 12345 
+        port = 12341 
         self.s.connect(('127.0.0.1', port))
     
     def click(self, x, y):
@@ -118,7 +118,8 @@ class ComputerAction:
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,x,y,0,0)
 
-    def check_mouse_click(self):
+    def check_mouse_click(self, computer_id):
+        self.s.send(str(computer_id).encode())
         while True:
             server_command = self.s.recv(1024)
             try:
@@ -164,7 +165,7 @@ def main():
     mouse = ComputerAction()
     send_details = threading.Thread(target=server_send.send_computer_details, args=[running_proc, com_history])
     send_screenshots = threading.Thread(target=screen.send_screenshot, args=[computer_id])
-    send_action = threading.Thread(target=mouse.check_mouse_click)
+    send_action = threading.Thread(target=mouse.check_mouse_click, args=[computer_id])
     send_screenshots.setDaemon(True)
     send_details.start()
     send_screenshots.start()
