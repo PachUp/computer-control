@@ -1,4 +1,3 @@
-from operator import pos
 from flask import request, render_template, Flask, redirect, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, current_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
