@@ -9,6 +9,7 @@ import threading
 import sqlite3
 from shutil import copyfile
 import getmac
+import os
 import getpass
 import socket
 import json
@@ -16,7 +17,7 @@ import win32api, win32con
 from ctypes import windll
 import time
 
-SERVER_URL = "http://127.0.0.1:5000"
+SERVER_URL = "http://192.168.1.200:5000"
 
 class ProcessDetails:
     def __init__(self):
@@ -94,7 +95,10 @@ class GetHistory:
 
         user = getpass.getuser()
         history = "C:\\Users\\" + user + "\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\History"
-        copyfile(history, '.\\ChromeHistoryCopy')
+        try:
+            copyfile(history, '.\\ChromeHistoryCopy')
+        except:
+            pass
         con = sqlite3.connect('.\\ChromeHistoryCopy')
         cursor = con.cursor()
         sql_select = """ SELECT datetime(last_visit_time/1000000-11644473600,'unixepoch','localtime'),
@@ -111,6 +115,7 @@ class GetHistory:
             if show_rec_10 <= 10:
                 if str(url).find("chrome-extension") == -1: # the user dosen't search extensions. Sometimes chrome logs it.
                     chrome_hisory.append(url)
+        con.close()
         return chrome_hisory
 
 
@@ -118,7 +123,7 @@ class ComputerAction:
     def __init__(self):
         self.s = socket.socket()
         port = 12341 
-        self.s.connect(('127.0.0.1', port))
+        self.s.connect(('192.168.1.200', port))
     
     def click(self, x, y):
         """
@@ -127,6 +132,9 @@ class ComputerAction:
 
         The function clicks on the X & Y coordinates on the screen.
         """
+        print("fun active")
+        print(x)
+        print(y)
         win32api.SetCursorPos((x,y))
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,x,y,0,0)
@@ -143,8 +151,11 @@ class ComputerAction:
             try:
                 pos = json.loads(server_command.decode())
                 print(pos)
-                pos_x = int(pos[0])
-                pos_y = int(pos[1])
+                pos_x = int(float(pos[0]))
+                pos_y = int(float(pos[1]))
+                print("before calling")
+                print(pos_x)
+                print(pos_y)
                 self.click(pos_x, pos_y)
             except:
                 lock_or_not = server_command.decode()
@@ -162,12 +173,12 @@ def computer_mac_address():
     return getmac.get_mac_address()
 
 def main():
-    address_link = 'http://127.0.0.1:5000/computers/verify_login'
+    address_link = 'http://192.168.1.200:5000/computers/verify_login'
     response = requests.get(address_link)
     status_code = response.status_code
     computer_id = ""
     if status_code == 200:
-        req_id = requests.post('http://127.0.0.1:5000/computers/verify_login',
+        req_id = requests.post('http://192.168.1.200:5000/computers/verify_login',
                             json={"mac_address": computer_mac_address()})
         computer_id = req_id.content.decode()
     screen = ScreenShot()

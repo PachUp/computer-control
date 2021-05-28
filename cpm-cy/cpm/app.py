@@ -9,6 +9,7 @@ import base64
 import socket
 import threading
 import itertools
+import multiprocessing
 import functools
 
 
@@ -141,14 +142,14 @@ def get_admin_panel_data():
     """
     The following function extacts all the data from the DB to show to the admin.
     """
-    user_username = []
+    users_username = []
     computer_client_id = []
     computers_mac = []
     assigned_values = []
     levels = []
     assigned_level_2_allowed_to_view = []
     for i in range(0, len(Users.query.all())):
-        user_username.append(Users.query.all()[i].username)
+        users_username.append(Users.query.all()[i].username)
         levels.append(Users.query.all()[i].level)
         if Users.query.all()[i].level == 2:
             assigned_level_2_allowed_to_view.append(Users.query.all()[i].allow_to_view_level_2)
@@ -161,7 +162,7 @@ def get_admin_panel_data():
     for i in range(0, len(Computer.query.all())):
         computer_client_id.append(Computer.query.all()[i].id)
         computers_mac.append(Computer.query.all()[i].mac_address)
-    return user_username, computer_client_id, assigned_values, levels, assigned_level_2_allowed_to_view
+    return users_username, computer_client_id, assigned_values, levels, assigned_level_2_allowed_to_view
 
 
 @app.route("/admin-panel", methods=['GET', 'POST'])
@@ -174,8 +175,8 @@ def admin_panel():
         return redirect("/admin-panel/data", code=307)
     if request.method == 'GET':
         if current_user.level == 3:
-            user_username, computer_client_id, assigned_values, levels, assigned_level_2_allowed_to_view = get_admin_panel_data()
-            return render_template("admin_panel.html", user_username=user_username,
+            users_username, computer_client_id, assigned_values, levels, assigned_level_2_allowed_to_view = get_admin_panel_data()
+            return render_template("admin_panel.html", users_username=users_username,
                                    computer_client_id=computer_client_id, assigned_values=assigned_values,
                                    levels=levels, assigned_level_2_allowed_to_view=assigned_level_2_allowed_to_view,
                                    computer_list_nev=computer_client_id, level_nev=int(current_user.level),
@@ -536,12 +537,14 @@ class ClientSocket:
                         if client == client_pos:
                             self.send_client(c, pos_foramt, "pos", id)
                             pos_foramt = {}  # restting the variables so it wont send it all the time.
+                            break
             if len(lock_foramt) > 0:
                 for client_lock in lock_foramt:
                     for client in list(client_id):
                         if client == client_lock:
                             self.send_client(c, lock_foramt, "lock", id)
                             lock_foramt = {}  # restting the variables so it wont send it all the time.
+                            break
 
     def send_client(self, c, s_format, identify, id):
         """
@@ -572,3 +575,4 @@ if __name__ == '__main__':
     socketio_func = functools.partial(socketio.run, app, host="0.0.0.0")
     threading.Thread(target=socketio_func).start()
     threading.Thread(target=client_socket.accept, daemon=True).start()
+    # multiprocessing.Process(target=client_socket.accept).start()
