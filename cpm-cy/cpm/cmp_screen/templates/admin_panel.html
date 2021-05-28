@@ -1,0 +1,172 @@
+<script src="https://code.jquery.com/jquery-3.5.1.js" integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css">
+<!-- Google Fonts -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+<!-- Bootstrap core CSS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
+<!-- Material Design Bootstrap -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/css/mdb.min.css" rel="stylesheet">
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/js/mdb.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.19.1/css/mdb.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/css/bootstrap-select.css">
+<table class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">computer id</th>
+        <th scope="col">level</th>
+        <th scope="col">Allow to view</th>
+        <th scope="col">username</th>
+        <th scope="col">Assigned computer id</th>
+        <th scope="col">Assigned level</th>
+        <th scope="col">Assigned level 2 view</th>
+        <th scope="col">Assign</th>
+        <th scope="col">status</th>
+      </tr>
+    </thead>
+    <tbody>
+        {% for(username, assign_value, level, allow_to_view) in zip(users_username, assigned_values, levels, assigned_level_2_allowed_to_view) %}
+        <tr>
+                <td>
+                computer number: 
+                <select class="computer-number custom-select" name={{username}}>
+                {% for client_id in  computer_client_id%}
+                <option value={{client_id}} name={{client_id}} >{{client_id}}</option>
+                {% endfor %}
+                <option value="-1" name="-1">None</option>
+                <option hidden selected class="va">{{assign_value}}</option>
+                </select>
+                </td>
+                <td>
+                    <select class="level-number custom-select" name={{username}}>
+                        <option value=1 name=1>1</option>
+                        <option value=2 name=2>2</option>
+                        <option value=3 name=3>3</option>
+                        <option value={{level}} name={{level}} hidden selected>{{level}}</option>
+                    </select>
+                </td>
+                <td>
+                    <div class="check-level">
+                    <select class="selectpicker multiple-choice" multiple data-live-search="true">
+                        {% for client_id in  computer_client_id%}
+                            <option>{{client_id}}</option>
+                        {% endfor %}
+                    </select>
+                    </div>
+                </td>
+                <td class = "username">{{username}}</td>
+                <td class="assigned_values">{{assign_value}}</td>
+                <td class="assigned_levels">{{level}}</td>
+                <td class="assigned-level-2-values">{{allow_to_view}}</td>
+                <td>
+                    <input type="submit" class="btn btn-danger btn-md button-class" value="submit" formaction="">
+                </td>   
+                <td>
+                    <div class="status"></div>
+                </td>     
+       </tr>
+       {% endfor %}
+    </tbody>
+  </table>
+
+<style>
+    .computer-number{
+        width: 80px;
+    }
+    .level-number{
+        width: 50px;
+    }
+</style>
+<script>
+$(document).ready(function(){
+    for(var i = 0; i<$('.level-number').length; i++){
+                if (parseInt($('.level-number').eq(i).val()) != 2){
+                    $(".check-level").eq(i).hide()// if attacker unhides it - check if it's still level 2 and just in case in backend, check if the level is 2
+                }
+            } // hiding users that are under the level 2
+        $(".button-class").click(function(){
+            var currentIndex = $('.button-class').index(this);
+            console.log(currentIndex)
+            var computer_number = $('.computer-number').eq(currentIndex).val()
+            var level_number = $('.level-number').eq(currentIndex).val()
+            var allow_to_view = $("select.multiple-choice").eq(currentIndex).val()
+            var username = $('.computer-number').eq(currentIndex).attr("name")
+            for(var i = 0; i<$('.level-number').length; i++){
+                if (parseInt($('.level-number').eq(i).val()) != 2){
+                    //$(".filter-option-inner-inner").eq(currentIndex).text("Nothing selected");
+                    $(".check-level").eq(i).hide()// if attacker unhides it - check if it's still level 2 and just in case in backend, check if the level is 2
+                }
+            } // hiding users that are under the level 2
+            if(allow_to_view != null && allow_to_view!="" && allow_to_view != "undefined" && level_number == 2){
+                var data = username + "=" + computer_number + "&" + level_number + "&";
+                for(var i =0; i<allow_to_view.length; i++){
+                    if(i==allow_to_view.length - 1){
+                        data = data + allow_to_view[i];
+                    }
+                    else{
+                        data = data + allow_to_view[i] + ',';
+                    }
+                }
+            } 
+            else{
+                var data = username + "=" + computer_number + "&" + level_number + "&None";
+            }
+            console.log(data)
+            $.ajax({
+                type: "POST",
+                url: 'admin-panel/data',
+                data: data,
+                beforeSend: function(){
+                    $(".status").eq(currentIndex).html("<div class = 'alert-info'>Loading...</div>");
+                },
+                success: function(res){
+                    user_computer_id = res["computer id"]
+                    user_computer_level = res["computer level"]
+                    level_2_allowed_vals = res["level 2"]
+                    failed = res["Values"]
+                    for(var i = 0; i<$('.level-number').length; i++){
+                        if (parseInt($('.level-number').eq(i).val()) == 2){
+                            console.log("HHGHIDFGIDFGIDFG")
+                            $(".check-level").eq(i).show()// if attacker unhides it - check if it's still level 2 and just in case in backend, check if the level is 2
+                        }
+                    } // hiding users that are under the level 2
+                    if(failed != "failed"){
+                        const $assigned_values = $(".assigned_values");
+                        const $assigned_levels = $(".assigned_levels");
+                        const $assigned_level_2_values = $(".assigned-level-2-values")
+                        $(".status").eq(currentIndex).html("<div class = 'alert-success'>Success</div>");
+                        setTimeout(function(){
+                            $(".status").eq(currentIndex).html("");
+                        }, 1500);
+                        $assigned_values.eq(currentIndex).text(user_computer_id)
+                        $assigned_levels.eq(currentIndex).text(user_computer_level)
+                        $assigned_level_2_values.eq(currentIndex).text(level_2_allowed_vals)
+                        /*
+                        for(var i = 0; i< user_computer_id.length; i++){
+                            $assigned_values.eq(i).text(user_computer_id[i]);
+                            $assigned_levels.eq(i).text(user_computer_level[i]);
+                            $assigned_level_2_values.eq(i).text(level_2_allowed_vals[i])
+                        }
+                        */
+                        if($('.level-number').eq(currentIndex).val() == 2){
+                            //$(".level-2-none").eq(currentIndex).html("<select class='selectpicker multiple-choice' multiple data-live-search='true'>{% for client_id in  computer_client_id%}<option>{{client_id}}</option>{% endfor %}</select>")
+                            console.log("level2")
+                        }
+                    }
+                    else{
+                        console.log(res)
+                        $(".status").eq(currentIndex).html("<div class = 'alert-danger'>Failed</div>");
+                    }
+                },
+                error: function(err, status){   
+                    alert("err" + err);
+                }
+            });
+        });
+    });
+</script>

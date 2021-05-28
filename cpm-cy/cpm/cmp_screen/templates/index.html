@@ -49,14 +49,11 @@
 						<a href="#" class="nav-item nav-link" data-toggle="dropdown">Computers</a>
 						<div class="dropdown-menu">
               {% for i in computer_list_nev %}
-              <a href= "http://admin-monitor.herokuapp.com/computers/{{i}}" class="dropdown-item this-is-navbar">{{i}}</a>
+              <a href= "{{ url_for('root', id=i)}}" class="dropdown-item this-is-navbar">{{i}}</a>
               {% endfor %}
-							<a href="/computer" class="dropdown-item">1</a>
-							<a href="#" class="dropdown-item">2</a>
-							<a href="#" class="dropdown-item">3</a>
 						</div>
 					</li>
-					<li><a href="#" class="nav-item nav-link">Admin Panel</a></li>
+					<li><a href="{{ url_for('admin_panel')}} " class="nav-item nav-link">Admin Panel</a></li>
 				</ul>
 			</div>
 		</div>
@@ -69,6 +66,7 @@
             <h1>Moninfo</h1>
         </div>
             <div class="bounceInUp animation">
+                <h2 class = "title"> Hello! you are logged in as {{user}} level: {{level}}</h2>
                 <p>Welcome, in this website you can view monitored computers that you are authorized to view.</p>
             </div>
             <a href="/logout" class="button button-primary">Logout</a>
@@ -95,7 +93,7 @@ body {
   font-size: 1.6rem;
   font-weight: 400;
 }
-h1 {
+h1 h2 {
   margin-bottom: 0.5em;
   font-size: 3.6rem;
 }
