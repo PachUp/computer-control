@@ -27,16 +27,18 @@ login_manager.init_app(app)
 db = SQLAlchemy(app)
 socketio = SocketIO(app)
 
-class computer(db.Model):
+
+class Computer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     mac_address = db.Column(db.TEXT)
 
-class users(db.Model, UserMixin):
+
+class Users(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.TEXT)
     password = db.Column(db.TEXT)
     email = db.Column(db.TEXT)
-    level = db.Column(db.INTEGER, default=1) # level 1 - regular employee, level 2 - Team leader, level 3 - Manager
+    level = db.Column(db.INTEGER, default=1)  # level 1 - regular employee, level 2 - Team leader, level 3 - Manager
     allow_to_view_level_2 = db.Column(db.TEXT, default="None")
     computer_id = db.Column(db.INTEGER, default=-1)
 
@@ -49,10 +51,10 @@ def load_user(user_id):
 @app.route("/login", methods=["GET", "POST"])
 @login_manager.unauthorized_handler
 def login():
-    '''
+    """
     The login function reverves the data from the client and checks if the user exists.
     If the user doesn't exist the function will return an error accordingly.
-    '''
+    """
     if request.method == "POST":
         username = request.form['username']
         password = request.form['password']
@@ -91,10 +93,10 @@ def logout():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    '''
-    The function registers the user to the site if the user doesn't exist & if he meets the 
+    """
+    The function registers the user to the site if the user doesn't exist & if he meets the
     requirements that he needed to do.
-    '''
+    """
     if request.method == "POST":
         username = request.form['username']
         password = request.form['password']
@@ -103,7 +105,7 @@ def register():
         user_check = bool(users.query.filter(func.lower(users.username) == func.lower(username)).first())
         email_check = bool(users.query.filter_by(email=email).first())
         amount_of_users = 0
-        for i in range(0,len(users.query.all())):
+        for i in range(0, len(users.query.all())):
             amount_of_users = amount_of_users + 1
         if email_check and (email[-10:] not in "@gmail.com" or email.count("@gmail.com") > 1) and user_check:
             print("all")
@@ -124,7 +126,8 @@ def register():
             if amount_of_users > 0:
                 new_user = users(username=username, password=md5(password.encode("utf-8")).hexdigest(), email=email)
             else:
-                new_user = users(username=username, password=md5(password.encode("utf-8")).hexdigest(), email=email, level=3)
+                new_user = users(username=username, password=md5(password.encode("utf-8")).hexdigest(), email=email,
+                                 level=3)
             db.session.add(new_user)
             db.session.commit()
             return redirect('/')
@@ -136,16 +139,16 @@ def register():
 
 
 def get_admin_panel_data():
-    '''
+    """
     The following function extacts all the data from the DB to show to the admin.
-    '''
+    """
     users_username = []
     computer_client_id = []
     computers_mac = []
     assigned_values = []
     levels = []
     assigned_level_2_allowed_to_view = []
-    for i in range(0,len(users.query.all())):
+    for i in range(0, len(users.query.all())):
         users_username.append(users.query.all()[i].username)
         levels.append(users.query.all()[i].level)
         if users.query.all()[i].level == 2:
@@ -165,30 +168,33 @@ def get_admin_panel_data():
 @app.route("/admin-panel", methods=['GET', 'POST'])
 @login_required
 def admin_panel():
-    '''
+    """
     The following function simply return the page with the details about each user.
-    '''
+    """
     if request.method == "POST":
         return redirect("/admin-panel/data", code=307)
     if request.method == 'GET':
         if current_user.level == 3:
             users_username, computer_client_id, assigned_values, levels, assigned_level_2_allowed_to_view = get_admin_panel_data()
-            return render_template("admin_panel.html", users_username = users_username, computer_client_id=computer_client_id, assigned_values=assigned_values, levels=levels,assigned_level_2_allowed_to_view=assigned_level_2_allowed_to_view, computer_list_nev =computer_client_id, level_nev = int(current_user.level),zip=itertools.zip_longest)
+            return render_template("admin_panel.html", users_username=users_username,
+                                   computer_client_id=computer_client_id, assigned_values=assigned_values,
+                                   levels=levels, assigned_level_2_allowed_to_view=assigned_level_2_allowed_to_view,
+                                   computer_list_nev=computer_client_id, level_nev=int(current_user.level),
+                                   zip=itertools.zip_longest)
         else:
             return redirect('/')
 
 
-
-def level_2_handle(remove_vals, user,level):
-    '''
+def level_2_handle(remove_vals, user, level):
+    """
     The function handles the LV 2 output that it recieved from the client.
-    '''
+    """
 
     count = 0
     if level == 2:
         if remove_vals[0] == "None":
             print("Allowed to view: " + "None")
-            users.query.filter_by(username = user).update(dict(allow_to_view_level_2 = "None"))
+            users.query.filter_by(username=user).update(dict(allow_to_view_level_2="None"))
             db.session.add(users)
             db.session.commit()
         try:
@@ -196,14 +202,14 @@ def level_2_handle(remove_vals, user,level):
             allow_to_view = ""
             for i in remove_vals:
                 count = count + 1
-                i = int(i) # checking if it only contains digits
+                i = int(i)  # checking if it only contains digits
                 i = str(i)
                 if count != len(remove_vals):
                     allow_to_view = allow_to_view + i + ","
                 else:
                     allow_to_view = allow_to_view + i
             print("Allowed to view: " + allow_to_view)
-            users.query.filter_by(username = user).update(dict(allow_to_view_level_2 = allow_to_view))
+            users.query.filter_by(username=user).update(dict(allow_to_view_level_2=allow_to_view))
             db.session.add(users)
             db.session.commit()
         except:
@@ -217,9 +223,9 @@ def level_2_handle(remove_vals, user,level):
 @app.route("/admin-panel/data", methods=['POST'])
 @login_required
 def admin_data():
-    '''
+    """
     The following function handles the request that the admin sent and updates everything accordingly.
-    '''
+    """
 
     if request.method == "POST":
         try:
@@ -238,7 +244,7 @@ def admin_data():
                 assign_value = assign_value.split("&")[0]
                 level = data.split('&')[1]
             except:
-                return {"Values" : "failed"}
+                return {"Values": "failed"}
             print(user)
             print(assign_value)
             print(level)
@@ -250,35 +256,36 @@ def admin_data():
                 user = str(user)
                 level = int(level)
             except:
-                return {"Values" : "failed"}
+                return {"Values": "failed"}
             user_found = False
             username_pos = -1
-            for i in range(0,len(users.query.all())):
-                if user ==  users.query.all()[i].username:
+            for i in range(0, len(users.query.all())):
+                if user == users.query.all()[i].username:
                     username_pos = i
             if assign_value != -1:
-                for j in range(0,len(users.query.all())):
-                    print("user: ", end="")
+                for j in range(0, len(users.query.all())):
                     print(users.query.all()[j].username)
                     if user == users.query.all()[j].username:
                         user_found = True
                         print("found")
                     if assign_value == users.query.all()[j].computer_id and j != username_pos:
                         print("Failed")
-                        return {"Values" : "failed"}
+                        return {"Values": "failed"}
             if (user_found == False and assign_value != -1) or level > 3:
                 print("the err2 ")
-                return {"Values" : "failed"}
+                return {"Values": "failed"}
             print("passed!")
-            users.query.filter_by(username = user).update(dict(computer_id = assign_value, level=level, allow_to_view_level_2= remove_vals))
+            users.query.filter_by(username=user).update(
+                dict(computer_id=assign_value, level=level, allow_to_view_level_2=remove_vals))
             db.session.commit()
             print("almost there")
             if assign_value == -1:
                 assign_value = "None"
-            return {"computer id" : assign_value, "computer level": level, "level 2" : remove_vals}
+            return {"computer id": assign_value, "computer level": level, "level 2": remove_vals}
         except:
             print("the err")
-            return {"Values" : "failed"}
+            return {"Values": "failed"}
+
 
 @app.route("/")
 @login_required
@@ -286,14 +293,17 @@ def index():
     all_computers = []
     for i in range(0, len(computer.query.all())):
         all_computers.append(computer.query.all()[i].id)
-    return render_template("index.html", user=current_user.username,level =int(current_user.level), computer_list_nev=all_computers)
+    return render_template("index.html", user=current_user.username, level=int(current_user.level),
+                           computer_list_nev=all_computers)
+
 
 ''' Client '''
 
-file_cl = "" # The frame that the client sends.
-pos_foramt = {} # the X & Y position of the mouse on the img with the ID
-lock_foramt = {} # Variable that indicates on wether to lock the screen or not with the ID.
+file_cl = ""  # The frame that the client sends.
+pos_foramt = {}  # the X & Y position of the mouse on the img with the ID
+lock_foramt = {}  # Variable that indicates on wether to lock the screen or not with the ID.
 client_id = {}
+
 
 @app.route('/computers/<int:id>')
 @login_required
@@ -315,13 +325,13 @@ def root(id):
                     return abort(404)
                 elif int(allow_to_acces[0]) == id:
                     return render_template('computer.html')
-        
+
             else:
                 for i in allow_to_acces:
                     i = int(i)
                     if i == id:
                         return render_template('computer.html')
-        
+
         elif current_user.level == 3:
             return render_template('computer.html')
     else:
@@ -336,24 +346,27 @@ def add_computer(mac_address, new_id):
     db.session.commit()
     return str(new_id)
 
-#verify_login
+
+# verify_login
 @app.route('/computers/verify_login', methods=['POST', 'GET'])
 def check_if_user_exists():
     if request.method == 'POST':
         js = request.get_json()
+        current_mac = ""
+        current_id = 0
         print(js)
         if js is not None:
             mac_address = js['mac_address']
             print("MAC: " + mac_address)
             print(len(computer.query.all()))
-            check_zero_computers = 0 # if there are 0 computers the for loop won't even happend.
+            check_zero_computers = 0  # if there are 0 computers the for loop won't even happend.
             if len(computer.query.all()) == 0:
                 print("1")
                 check_zero_computers = 1
             else:
                 check_zero_computers = 0
 
-            for i in range(0,len(computer.query.all()) + check_zero_computers):
+            for i in range(0, len(computer.query.all()) + check_zero_computers):
                 print("In")
                 if check_zero_computers == 0:
                     print("checking i")
@@ -371,7 +384,7 @@ def check_if_user_exists():
             return add_computer(mac_address, new_id)
         else:
             print("Empty, bad request")
-    else:   
+    else:
         return ""
 
 
@@ -381,11 +394,12 @@ def on_join(data):
     print("joined room " + room)
     join_room(room)
 
+
 @app.route("/represent_file/<int:id>", methods=['GET'])
 def re_file(id):
-    '''
+    """
     The function returns a base64 encoded image that was sent to him from the client.
-    '''
+    """
     if request.method == "GET":
         global file_cl
         try:
@@ -398,9 +412,9 @@ def re_file(id):
 
 @app.route("/get_file/<int:id>", methods=['POST'])
 def get_file(id):
-    '''
+    """
     A function that sends the client when to ask for the new picture.
-    '''
+    """
     if request.method == "POST":
         global file_cl
         t_file = request.data
@@ -409,7 +423,8 @@ def get_file(id):
             base64_encoded_img = base64.b64encode(file_cl)
             base64_img = base64_encoded_img.decode('utf-8')
             socketio.emit("get-file", {
-                "data": "OK"}, room=str(id))  # The reason I am using socketio in here is so that I'll know when to ask for the new image.
+                "data": "OK"}, room=str(
+                id))  # The reason I am using socketio in here is so that I'll know when to ask for the new image.
         except:
             return "Err"
         return "200 OK"
@@ -423,12 +438,14 @@ def info(id):
     formatted_procs = ""
     formatted_history = ""
     for process in running_procs:
-        formatted_procs = formatted_procs + "--- PID: " + str(process["pid"]) + " --- " + "Name: " + str(process["name"]) + "--0" + "<br>"
+        formatted_procs = formatted_procs + "--- PID: " + str(process["pid"]) + " --- " + "Name: " + str(
+            process["name"]) + "--0" + "<br>"
     for history_tuple in search_history:
-            formatted_history = formatted_history + "DATE: " + history_tuple[0] + "<br> URL: " + history_tuple[1] + "<br><br>"
-            # formatted_history = formatted_history + "Date: " + date + " URL: " + url
+        formatted_history = formatted_history + "DATE: " + history_tuple[0] + "<br> URL: " + history_tuple[
+            1] + "<br><br>"
+        # formatted_history = formatted_history + "Date: " + date + " URL: " + url
     # print(formatted_history)
-    socketio.emit("info", {"procs": formatted_procs, "history" : formatted_history}, room=str(id))
+    socketio.emit("info", {"procs": formatted_procs, "history": formatted_history}, room=str(id))
     return "200 OK"
 
 
@@ -440,6 +457,7 @@ def pic_click(data):
     id = data["room"]
     pos_foramt = {id: [pos_x, pos_y]}
 
+
 @socketio.on("lock")
 def lock_client(data):
     global lock_foramt
@@ -447,31 +465,33 @@ def lock_client(data):
     id = data["room"]
     lock_foramt = {id: lock}
 
+
 """@app.route("/action", methods=["POST"])
 def action():"""
 
+
 class ClientSocket:
     def __init__(self):
-        self.s = socket.socket()         
+        self.s = socket.socket()
         print ("Socket successfully created")
         port = 12341
-        self.s.bind(('', port))         
-        print ("socket binded to %s" %(port))
-        self.s.listen(5) # the amount of computers connected
+        self.s.bind(('', port))
+        print ("socket binded to %s" % (port))
+        self.s.listen(5)  # the amount of computers connected
 
     def accept(self):
         while True:
             c, addr = self.s.accept()
-            print ('Got connection from', addr )
+            print ('Got connection from', addr)
             threading.Thread(target=self.client_verification, args=[c], daemon=True).start()
             # multiprocessing.Process(target=send_client, args=("c", )).start()
-        
+
     def client_verification(self, c):
         global pos_foramt
         global lock_foramt
         global client_id
         print("active")
-        id = str(c.recv(1024).decode()) # making sure
+        id = str(c.recv(1024).decode())  # making sure
         client_id[id] = c
         while True:
             if len(pos_foramt) > 0:
@@ -479,20 +499,19 @@ class ClientSocket:
                     for client in list(client_id):
                         if client == client_pos:
                             self.send_client(c, pos_foramt, "pos", id)
-                            pos_foramt = {} # restting the variables so it wont send it all the time.
+                            pos_foramt = {}  # restting the variables so it wont send it all the time.
             if len(lock_foramt) > 0:
                 for client_lock in lock_foramt:
                     for client in list(client_id):
                         if client == client_lock:
                             self.send_client(c, lock_foramt, "lock", id)
-                            lock_foramt = {} # restting the variables so it wont send it all the time.
-
+                            lock_foramt = {}  # restting the variables so it wont send it all the time.
 
     def send_client(self, c, s_format, identify, id):
         try:
             if identify == "pos":
-                position = f'["{s_format[id][0]}", "{s_format[id][1]}"]' # formatting the string as a list
-                c.send(position.encode()) # sending data to the client
+                position = f'["{s_format[id][0]}", "{s_format[id][1]}"]'  # formatting the string as a list
+                c.send(position.encode())  # sending data to the client
             else:
                 if s_format[id] == "True":
                     c.send("Lock".encode())
@@ -500,13 +519,12 @@ class ClientSocket:
                     c.send("Unlock".encode())
         except socket.error:
             print("Bye!")
-            del client_id[id] # in case that the client disconnect.
+            del client_id[id]  # in case that the client disconnect.
             print(client_id)
+
 
 if __name__ == '__main__':
     client_socket = ClientSocket()
     socketio_func = functools.partial(socketio.run, app, host="0.0.0.0")
     threading.Thread(target=socketio_func).start()
     threading.Thread(target=client_socket.accept, daemon=True).start()
-    # socketio.run(app, host="0.0.0.0", debug=True)
-
