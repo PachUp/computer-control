@@ -45,7 +45,7 @@ class Users(db.Model, UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return users.query.get(int(user_id))
+    return Users.query.get(int(user_id))
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -61,14 +61,14 @@ def login():
         check_box = request.form['CheckBox']
         print(check_box)
         print(check_box)
-        user_check = bool(users.query.filter_by(username=username).first())
-        pass_check = bool(users.query.filter_by(password=md5(password.encode("utf-8")).hexdigest()).first())
+        user_check = bool(Users.query.filter_by(username=username).first())
+        pass_check = bool(Users.query.filter_by(password=md5(password.encode("utf-8")).hexdigest()).first())
         if user_check and not pass_check:
             return "password"
         elif not user_check:
             return "username"
         else:
-            user = users.query.filter_by(username=username, password=md5(password.encode("utf-8")).hexdigest()).first()
+            user = Users.query.filter_by(username=username, password=md5(password.encode("utf-8")).hexdigest()).first()
             db.session.commit()
             app.permanent_session_lifetime = False
             if check_box == "True":  # always true for now
@@ -102,10 +102,10 @@ def register():
         password = request.form['password']
         email = request.form['email']
         print(username)
-        user_check = bool(users.query.filter(func.lower(users.username) == func.lower(username)).first())
-        email_check = bool(users.query.filter_by(email=email).first())
+        user_check = bool(Users.query.filter(func.lower(Users.username) == func.lower(username)).first())
+        email_check = bool(Users.query.filter_by(email=email).first())
         amount_of_users = 0
-        for i in range(0, len(users.query.all())):
+        for user in range(0, len(Users.query.all())):
             amount_of_users = amount_of_users + 1
         if email_check and (email[-10:] not in "@gmail.com" or email.count("@gmail.com") > 1) and user_check:
             print("all")
@@ -124,9 +124,9 @@ def register():
             return "username exist"
         else:
             if amount_of_users > 0:
-                new_user = users(username=username, password=md5(password.encode("utf-8")).hexdigest(), email=email)
+                new_user = Users(username=username, password=md5(password.encode("utf-8")).hexdigest(), email=email)
             else:
-                new_user = users(username=username, password=md5(password.encode("utf-8")).hexdigest(), email=email,
+                new_user = Users(username=username, password=md5(password.encode("utf-8")).hexdigest(), email=email,
                                  level=3)
             db.session.add(new_user)
             db.session.commit()
@@ -142,27 +142,27 @@ def get_admin_panel_data():
     """
     The following function extacts all the data from the DB to show to the admin.
     """
-    users_username = []
+    user_username = []
     computer_client_id = []
     computers_mac = []
     assigned_values = []
     levels = []
     assigned_level_2_allowed_to_view = []
-    for i in range(0, len(users.query.all())):
-        users_username.append(users.query.all()[i].username)
-        levels.append(users.query.all()[i].level)
-        if users.query.all()[i].level == 2:
-            assigned_level_2_allowed_to_view.append(users.query.all()[i].allow_to_view_level_2)
+    for i in range(0, len(Users.query.all())):
+        user_username.append(Users.query.all()[i].username)
+        levels.append(Users.query.all()[i].level)
+        if Users.query.all()[i].level == 2:
+            assigned_level_2_allowed_to_view.append(Users.query.all()[i].allow_to_view_level_2)
         else:
             assigned_level_2_allowed_to_view.append("None")
-        if users.query.all()[i].computer_id == -1:
+        if Users.query.all()[i].computer_id == -1:
             assigned_values.append("None")
         else:
-            assigned_values.append(users.query.all()[i].computer_id)
-    for i in range(0, len(computer.query.all())):
-        computer_client_id.append(computer.query.all()[i].id)
-        computers_mac.append(computer.query.all()[i].mac_address)
-    return users_username, computer_client_id, assigned_values, levels, assigned_level_2_allowed_to_view
+            assigned_values.append(Users.query.all()[i].computer_id)
+    for i in range(0, len(Computer.query.all())):
+        computer_client_id.append(Computer.query.all()[i].id)
+        computers_mac.append(Computer.query.all()[i].mac_address)
+    return user_username, computer_client_id, assigned_values, levels, assigned_level_2_allowed_to_view
 
 
 @app.route("/admin-panel", methods=['GET', 'POST'])
@@ -175,8 +175,8 @@ def admin_panel():
         return redirect("/admin-panel/data", code=307)
     if request.method == 'GET':
         if current_user.level == 3:
-            users_username, computer_client_id, assigned_values, levels, assigned_level_2_allowed_to_view = get_admin_panel_data()
-            return render_template("admin_panel.html", users_username=users_username,
+            user_username, computer_client_id, assigned_values, levels, assigned_level_2_allowed_to_view = get_admin_panel_data()
+            return render_template("admin_panel.html", user_username=user_username,
                                    computer_client_id=computer_client_id, assigned_values=assigned_values,
                                    levels=levels, assigned_level_2_allowed_to_view=assigned_level_2_allowed_to_view,
                                    computer_list_nev=computer_client_id, level_nev=int(current_user.level),
@@ -194,8 +194,8 @@ def level_2_handle(remove_vals, user, level):
     if level == 2:
         if remove_vals[0] == "None":
             print("Allowed to view: " + "None")
-            users.query.filter_by(username=user).update(dict(allow_to_view_level_2="None"))
-            db.session.add(users)
+            Users.query.filter_by(username=user).update(dict(allow_to_view_level_2="None"))
+            db.session.add(Users)
             db.session.commit()
         try:
             print("trying level 2")
@@ -209,8 +209,8 @@ def level_2_handle(remove_vals, user, level):
                 else:
                     allow_to_view = allow_to_view + i
             print("Allowed to view: " + allow_to_view)
-            users.query.filter_by(username=user).update(dict(allow_to_view_level_2=allow_to_view))
-            db.session.add(users)
+            Users.query.filter_by(username=user).update(dict(allow_to_view_level_2=allow_to_view))
+            db.session.add(Users)
             db.session.commit()
         except:
             print("err level 2")
@@ -259,23 +259,23 @@ def admin_data():
                 return {"Values": "failed"}
             user_found = False
             username_pos = -1
-            for i in range(0, len(users.query.all())):
-                if user == users.query.all()[i].username:
+            for i in range(0, len(Users.query.all())):
+                if user == Users.query.all()[i].username:
                     username_pos = i
             if assign_value != -1:
-                for j in range(0, len(users.query.all())):
-                    print(users.query.all()[j].username)
-                    if user == users.query.all()[j].username:
+                for j in range(0, len(Users.query.all())):
+                    print(Users.query.all()[j].username)
+                    if user == Users.query.all()[j].username:
                         user_found = True
                         print("found")
-                    if assign_value == users.query.all()[j].computer_id and j != username_pos:
+                    if assign_value == Users.query.all()[j].computer_id and j != username_pos:
                         print("Failed")
                         return {"Values": "failed"}
             if (user_found == False and assign_value != -1) or level > 3:
                 print("the err2 ")
                 return {"Values": "failed"}
             print("passed!")
-            users.query.filter_by(username=user).update(
+            Users.query.filter_by(username=user).update(
                 dict(computer_id=assign_value, level=level, allow_to_view_level_2=remove_vals))
             db.session.commit()
             print("almost there")
@@ -291,8 +291,8 @@ def admin_data():
 @login_required
 def index():
     all_computers = []
-    for i in range(0, len(computer.query.all())):
-        all_computers.append(computer.query.all()[i].id)
+    for i in range(0, len(Computer.query.all())):
+        all_computers.append(Computer.query.all()[i].id)
     return render_template("index.html", user=current_user.username, level=int(current_user.level),
                            computer_list_nev=all_computers)
 
@@ -341,7 +341,7 @@ def root(id):
 def add_computer(mac_address, new_id):
     print(mac_address)
     print(new_id)
-    new_user = computer(mac_address=mac_address, id=new_id)
+    new_user = Computer(mac_address=mac_address, id=new_id)
     db.session.add(new_user)
     db.session.commit()
     return str(new_id)
@@ -358,20 +358,20 @@ def check_if_user_exists():
         if js is not None:
             mac_address = js['mac_address']
             print("MAC: " + mac_address)
-            print(len(computer.query.all()))
+            print(len(Computer.query.all()))
             check_zero_computers = 0  # if there are 0 computers the for loop won't even happend.
-            if len(computer.query.all()) == 0:
+            if len(Computer.query.all()) == 0:
                 print("1")
                 check_zero_computers = 1
             else:
                 check_zero_computers = 0
 
-            for i in range(0, len(computer.query.all()) + check_zero_computers):
+            for i in range(0, len(Computer.query.all()) + check_zero_computers):
                 print("In")
                 if check_zero_computers == 0:
                     print("checking i")
-                    current_id = computer.query.all()[i].id
-                    current_mac = computer.query.all()[i].mac_address
+                    current_id = Computer.query.all()[i].id
+                    current_mac = Computer.query.all()[i].mac_address
                 elif check_zero_computers == 1:
                     print("No comp")
                     current_id = 0
@@ -380,7 +380,7 @@ def check_if_user_exists():
                     print("True!")
                     return str(current_id)
             print("Not found")
-            new_id = len(computer.query.all()) + 1
+            new_id = len(Computer.query.all()) + 1
             return add_computer(mac_address, new_id)
         else:
             print("Empty, bad request")
