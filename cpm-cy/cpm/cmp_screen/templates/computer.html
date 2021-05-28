@@ -76,6 +76,7 @@
     var process_text = "";
     var control = 1;
     var lock = 1;
+    var clicked = false;
     $("#screen, #items").mousemove(function(){
         $(".item").show("fast");
         clearTimeout(iconTimer); // to prevent event loops
@@ -115,13 +116,15 @@
         var relY = e.pageY - parentOffset.top;
         console.log(relY);
         console.log(relX);
-        if(control % 2 == 0 && control != 2){
+        if(control % 2 == 0 && clicked == false){
             socketio.emit("pic click", {"posX": relX, "posY": relY, "room": room})
             console.log("send")
         }
+        clicked = false
     });
 
     $("#control").click(function(){
+        clicked = true;
         control++;
         if(control % 2 == 0){
             $("#control").css("box-shadow", "3px 1px 2px rgba(0, 255, 21, 0.548)")
