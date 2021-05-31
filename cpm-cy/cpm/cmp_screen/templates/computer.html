@@ -97,7 +97,7 @@
 
     function hideIcons(){
         $(".item").hide("fast");
-    }
+    }Z
     
     // socketio part
     var socketio = io();
@@ -150,8 +150,8 @@
 
     socketio.on("get-file", function(data){
         console.log("Called!")
-        recv_img(); // showing the image when it's recived in the server.
-        //document.getElementById("screen").src = "data:image/png;base64," + data["data"];
+        // recv_img(); // showing the image when it's recived in the server.
+        document.getElementById("screen").src = "data:image/png;base64," + data["data"];
     });
     socketio.on("info", function(data){
         console.log(data)
@@ -160,7 +160,7 @@
         process_modal.find('.modal-body').html(data["procs"]);
         history_modal.find('.modal-body').html(data["history"]);
     });
-    
+    /*
     function recv_img(){
         const img = document.querySelector('img');
         $.ajax({ // try to disable cache if it doesn't work.
@@ -172,6 +172,7 @@
             }
         });
     }
+    */
 </script>
 
 <style>
