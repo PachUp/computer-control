@@ -138,7 +138,7 @@ function myFunction() {
         $("#button-id").click(function(){
             var res = grecaptcha.getResponse();
             console.log(res.length);
-            if(true){ //It should be an empty string 
+            if(res.length != 0){ //It should be an empty string 
                 var data = $("form").serialize();
                 if ($('#autoSizingCheck').is(':checked')){
                     data = data + "&CheckBox=" + "True" // maybe change in the future(that's why I have the +), option is disabled for now

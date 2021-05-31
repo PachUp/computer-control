@@ -1,5 +1,4 @@
 import mss
-import pickle
 import mss.tools
 import requests
 from time import sleep
@@ -8,17 +7,17 @@ import psutil
 import threading
 import sqlite3
 from shutil import copyfile
-import getmac
-import os
+from getmac import get_mac_address
 import getpass
 import socket
 import json
 import win32api, win32con
 from ctypes import windll
-import time
 
-SERVER_URL = "http://192.168.1.200:5000"
-SERVER_IP = "192.168.1.200"
+
+
+SERVER_IP = input("Enter the server's IP address: ")
+SERVER_URL = f"http://{SERVER_IP}:5000"
 SOCKET_PORT = 12341
 RECV_DEFAULT = 1024
 
@@ -163,12 +162,10 @@ class ComputerAction:
             except:
                 lock_or_not = server_command.decode()
                 print(lock_or_not)
-                if lock_or_not == "Lock":
+                if lock_or_not == "Lock": # only works if the client is activated in administrator mode
                     windll.user32.BlockInput(True)
                 else:
                     windll.user32.BlockInput(False)
-
-
 
 
 class InitServer():
@@ -177,26 +174,23 @@ class InitServer():
 
     def init_server_conn(self):
         address_link = f'{SERVER_URL}/computers/verify_login'
-        response = requests.get(address_link)
-        status_code = response.status_code
-        if status_code == 200:
-            return self.get_client_id()
-        else:
-            print("--- The server is offline! Closing program... ---")
+        try:
+            response = requests.get(address_link)
+            status_code = response.status_code
+            if status_code == 200:
+                return self.get_client_id()
+            else:
+                print("--- There was a some problem with the server! Closing program... ---")
+                exit()
+        except:
+            print("--- The server is offline! Are you sure this is the correct IP address? Closing program... ---")
             exit()
     
     def get_client_id(self):
         req_id = requests.post(f'{SERVER_URL}/computers/verify_login',
-                            json={"mac_address": computer_mac_address()})
+                            json={"mac_address": get_mac_address()})
         computer_id = req_id.content.decode()
         return computer_id
-
-
-def computer_mac_address():
-    """
-    The function returns the mac address of the computer
-    """
-    return getmac.get_mac_address()
 
 
 def main():

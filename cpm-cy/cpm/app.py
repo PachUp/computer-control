@@ -9,7 +9,6 @@ import base64
 import socket
 import threading
 import itertools
-import multiprocessing
 import functools
 
 
@@ -38,7 +37,7 @@ class Users(db.Model, UserMixin):
     username = db.Column(db.TEXT)
     password = db.Column(db.TEXT)
     email = db.Column(db.TEXT)
-    level = db.Column(db.INTEGER, default=1)  # level 1 - regular employee, level 2 - Team leader, level 3 - Manager
+    level = db.Column(db.INTEGER, default=1)  # level 1 - regular, level 2 - Multiple computers, level 3 - admin
     allow_to_view_level_2 = db.Column(db.TEXT, default="None")
     computer_id = db.Column(db.INTEGER, default=-1)
 
@@ -229,7 +228,7 @@ def admin_data():
     """
     The following function handles the request that the admin sent and updates everything accordingly.
     """
-    if request.method == "POST":
+    if request.method == "POST" and current_user.level == 3:
         try:
             assign_value = -1
             user = ""
@@ -247,10 +246,7 @@ def admin_data():
                 level = data.split('&')[1]
             except:
                 return {"Values": "failed"}
-            print(user)
-            print(assign_value)
-            print(level)
-            print(remove_vals)
+
             if assign_value == "None":
                 assign_value = -1
             try:
@@ -414,24 +410,6 @@ def on_join(data):
     print("joined room " + room)
     join_room(room)
 
-
-@app.route("/represent_file/<int:id>", methods=['GET'])
-def re_file(id):
-    """
-    :param id: the ID of the computer.
-
-    The function returns a base64 encoded image that was sent to him from the client.
-    """
-    if request.method == "GET":
-        global file_cl
-        try:
-            base64_encoded_img = base64.b64encode(file_cl)
-            base64_img = base64_encoded_img.decode('utf-8')
-            return base64_img
-        except:
-            return "Err"
-
-
 @app.route("/get_file/<int:id>", methods=['POST'])
 def get_file(id):
     """
@@ -447,7 +425,7 @@ def get_file(id):
             base64_encoded_img = base64.b64encode(file_cl)
             base64_img = base64_encoded_img.decode('utf-8')
             socketio.emit("get-file", {
-                "data": "OK"}, room=str(
+                "data": base64_img}, room=str(
                 id))  # The reason I am using socketio in here is so that I'll know when to ask for the new image.
         except:
             return "Err"
@@ -536,14 +514,14 @@ class ClientSocket:
                     for client in list(client_id):
                         if client == client_pos:
                             self.send_client(c, pos_foramt, "pos", id)
-                            pos_foramt = {}  # restting the variables so it wont send it all the time.
+                            pos_foramt = {}  # resetting the variables so it wont send it all the time.
                             break
             if len(lock_foramt) > 0:
                 for client_lock in lock_foramt:
                     for client in list(client_id):
                         if client == client_lock:
                             self.send_client(c, lock_foramt, "lock", id)
-                            lock_foramt = {}  # restting the variables so it wont send it all the time.
+                            lock_foramt = {}  # resetting the variables so it wont send it all the time.
                             break
 
     def send_client(self, c, s_format, identify, id):
@@ -567,7 +545,6 @@ class ClientSocket:
         except socket.error:
             print("Bye!")
             del client_id[id]  # in case that the client disconnect.
-            print(client_id)
 
 
 if __name__ == '__main__':
