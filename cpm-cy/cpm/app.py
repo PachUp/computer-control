@@ -303,6 +303,7 @@ def index():
 file_cl = ""  # The frame that the client sends.
 pos_foramt = {}  # the X & Y position of the mouse on the img with the ID
 lock_foramt = {}  # Variable that indicates on wether to lock the screen or not with the ID.
+key_foramt = {}
 client_id = {}
 
 
@@ -472,6 +473,12 @@ def lock_client(data):
     id = data["room"]
     lock_foramt = {id: lock}
 
+@socketio.on("pic type")
+def lock_client(data):
+    global key_foramt
+    key = str(data["key"])
+    id = data["room"]
+    key_foramt = {id: key}
 
 class ClientSocket:
     def __init__(self):
@@ -505,7 +512,7 @@ class ClientSocket:
         global pos_foramt
         global lock_foramt
         global client_id
-        print("active")
+        global key_foramt
         id = str(c.recv(1024).decode())  # making sure
         client_id[id] = c
         while True:
@@ -523,7 +530,13 @@ class ClientSocket:
                             self.send_client(c, lock_foramt, "lock", id)
                             lock_foramt = {}  # resetting the variables so it wont send it all the time.
                             break
-
+            if len(key_foramt) > 0:
+                for client_pos in key_foramt:
+                    for client in list(client_id):
+                        if client == client_pos:
+                            self.send_client(c, key_foramt, "key", id)
+                            key_foramt = {} # resetting the variables so it wont send it all the time.
+                            break
     def send_client(self, c, s_format, identify, id):
         """
         :param c: socket object
@@ -533,15 +546,19 @@ class ClientSocket:
 
         The function sends the data to the computer's client.
         """
+        print(identify)
         try:
             if identify == "pos":
                 position = f'["{s_format[id][0]}", "{s_format[id][1]}"]'  # formatting the string as a list
                 c.send(position.encode())  # sending data to the client
-            else:
+            elif identify == "lock":
                 if s_format[id] == "True":
                     c.send("Lock".encode())
                 else:
                     c.send("Unlock".encode())
+            else:
+                key = s_format[id]
+                c.send(key.encode())
         except socket.error:
             print("Bye!")
             del client_id[id]  # in case that the client disconnect.
